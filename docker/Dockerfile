@@ -1,13 +1,19 @@
 FROM busybox:stable
 
 ARG S6_OVERLAY_VERSION=3.2.0.0
-ARG S6_ARCH=x86_64
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz /tmp
-RUN \
-  tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
-  tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
-  rm /tmp/s6-overlay*.tar.xz && \
+ARG TARGETARCH
+RUN set -eux; \
+  case "$TARGETARCH" in \
+    amd64) S6_ARCH=x86_64 ;; \
+    arm64) S6_ARCH=aarch64 ;; \
+    arm) S6_ARCH=armhf ;; \
+    *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+  esac; \
+  wget -O /tmp/s6-overlay-noarch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz"; \
+  wget -O /tmp/s6-overlay-${S6_ARCH}.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz"; \
+  tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz; \
+  tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz; \
+  rm /tmp/s6-overlay*.tar.xz; \
   ln -s /run /var/run
 
 COPY rootfs /
